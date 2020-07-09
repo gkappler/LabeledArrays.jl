@@ -6,52 +6,79 @@ import LinearAlgebra: Adjoint
 nnz(x::LinearAlgebra.Adjoint) =
     nnz(x.parent)
 
-export LabeledArray
 
-struct LabeledArray{T,A <: AbstractArray{T,2},R,C} <: AbstractArray{T,2}
+export LabeledArray
+"""
+A matrix, `AbstractArray{T,2}`, with a layer labeled rows and cols.
+"""
+struct LabeledMatrix{T,A <: AbstractArray{T,2},R,C} <: AbstractArray{T,2}
     row::R
     col::C
-    counts::A
-    function LabeledArray(row,col,counts::A) where {A<:AbstractArray}
-        new{eltype(counts),A,typeof(row),typeof(col)}(row,col,counts)
+    values::A
+    function LabeledMatrix(row,col,values::A) where {A<:AbstractArray}
+        new{eltype(values),A,typeof(row),typeof(col)}(row,col,values)
     end
 end
 
-import Base: +, *, adjoint, size
 
-Base.size(x::LabeledArray) = Base.size(x.counts)
+
+Base.getindex(x::LabeledMatrix, a...) = x.values[a...]
+Base.getindex(x::LabeledMatrix, row::NumID, a...) =
+    if match(x.row,row)
+        x.values[get(row),a...]
+    else
+        error("invalid index: $row for $(x.row)")
+    end
+
+import Base: +, *, adjoint, size
+Base.size(x::LabeledMatrix) =
+    Base.size(x.values)
+adjoint(x::LabeledMatrix) =
+    LabeledMatrix(x.col, x.row, x.values')
+@deprecate reverse(x::LabeledMatrix) adjoint(x)
+
+function *(x::LabeledMatrix, y::LabeledMatrix)
+    @assert x.col == y.row
+    LabeledMatrix(
+        x.row, y.col,
+        x.values * y.values)
+end
+*(x::LabeledMatrix, y::AbstractArray) = x.values*y
+*(x::AbstractArray, y::LabeledMatrix) = x*y.values
+*(x::LabeledMatrix, y::Number) =
+    LabeledMatrix(
+        x.row, x.col,
+        x.values*y)
+*(x::Number, y::LabeledMatrix) =
+    LabeledMatrix(
+        y.row, y.col,
+        x*y.values)
+
+function +(x::LabeledMatrix, y::LabeledMatrix)
+    @assert x.row == y.row
+    @assert x.col == y.col
+    LabeledMatrix(
+        x.row, y.col,
+        x.values + y.values)
+end
++(x::LabeledMatrix, y) = x.values+y
++(x, y::LabeledMatrix) = x+y.values
++(x::LabeledMatrix, y::Number) =
+    LabeledMatrix(
+        x.row, x.col,
+        x.values+y)
++(x::Number, y::LabeledMatrix) =
+    LabeledMatrix(
+        y.row, y.col,
+        x+y.values)
+
+
 
 export bool
 "TODO: broadcasting"
-bool(A::LabeledArray) =
-    LabeledArray(A.row, A.col, A.counts.>0)
+bool(A::LabeledMatrix) =
+    LabeledMatrix(A.row, A.col, A.values.>0)
 
-function adjoint(x::LabeledArray)
-    LabeledArray(x.col, x.row, x.counts')
-end
-
-function *(x::LabeledArray, y::LabeledArray)
-    @assert x.col == y.row
-    LabeledArray(
-        x.row, y.col,
-        x.counts * y.counts)
-end
-
-function +(x::LabeledArray, y::LabeledArray)
-    @assert x.row == y.row
-    @assert x.col == y.col
-    LabeledArray(
-        x.row, y.col,
-        x.counts + y.counts)
-end
-
-function Base.reverse(x::LabeledArray)
-    LabeledArray(x.col, x.row, x.counts')
-end
-
-
-
-Base.getindex(x::LabeledArray, a...) = x.counts[a...]
 
 
 
