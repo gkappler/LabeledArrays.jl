@@ -1,8 +1,10 @@
 # LabeledArrays
-provides indexed `Vector`s for fast Int index retrieval, 
-sparse index vectors and a `NamedMatrix`.
+`Vector`s for fast Int index retrieval, `NamedMatrix` with names as keys of arbitrary type and sparse index vectors.
 
-TODO: generalized `NamedArray` implementation.
+TODO: 
+- generalized `NamedArray` implementation.
+- examples
+
 
 # Public Documentation
 
