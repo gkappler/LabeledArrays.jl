@@ -19,7 +19,28 @@ struct LabeledMatrix{T,A <: AbstractArray{T,2},R,C} <: AbstractArray{T,2}
         new{eltype(values),A,typeof(row),typeof(col)}(row,col,values)
     end
 end
+export collapse_observations
+function collapse_observations(f::Function,x,T=Any) 
+   nb = NBijection(T[])
+    cols = Int32[  get!(nb,f(e))
+                   for e in values(x)
+                   ]
+    LabeledMatrix(x,nb,
+                 sparse(1:length(cols),cols,
+                        ConstArray(1,length(cols)),
+                        length(cols),length(nb)))
+end
+export row
+row(x::LabeledMatrix,y) = row(x.col,y)
+"""
+    row(x::NBijection,y)
 
+See also [`LabeledMatrix`](@ref).
+"""
+function row(x::NBijection,y)
+    idxs = filter(x->x!==nothing,indexin(y,x))
+    sparsevec(idxs,ConstArray(1,length(idxs)),length(x))
+end
 
 
 Base.getindex(x::LabeledMatrix, a...) = x.values[a...]
@@ -80,11 +101,12 @@ bool(A::LabeledMatrix) =
     LabeledMatrix(A.row, A.col, A.values.>0)
 
 
+import StatsBase: mean
 
 
+Base.sum(x::LabeledMatrix; kw...) =
+    sum(x.values; kw...)
 using LinearAlgebra
-
-import Base: sum
 import LinearAlgebra: Adjoint
 Base.sum(x::Adjoint; dims=:) =
     if dims isa Colon
@@ -95,40 +117,38 @@ Base.sum(x::Adjoint; dims=:) =
         sum(x.parent,dims=1)'
     end
 
-
-import StatsBase: mean
+ 
 import Printf: @printf
-
-function Base.show(io::IO, x::LabeledArray)
+function Base.show(io::IO, x::LabeledMatrix)
     Base.show(io, MIME"text/plain"(), x)
 end
-
 compactstring(x) =
     let io = IOBuffer()
         print(IOContext(io, :compact => true),x)
         String(take!(io))
     end
-
-function Base.show(io::IO, ::MIME"text/plain", x::LabeledArray)
-    nzs = x.counts.>0
-    print(io, "",
-          nnz(x.counts), " observation counts")
-    @printf(io," (%d %s x %d %s). ", size(x.counts)[1], x.row,
-            size(x.counts)[2], x.col)
-    crow = compactstring(x.row)
-    ccol = compactstring(x.col)
-    @printf(io, "%.2f %s/%s (unique %.2f) on average. %d %ss have no observed %s. %d observed %ss have no %s.\n",
-            mean(sum(x.counts,dims=2)),
+function Base.show(io::IO, ::MIME"text/plain", x::LabeledMatrix)
+    nzs = x.values.>0
+    @printf(io,"%d x %d: %s x %s. ", size(x.values)[1], 
+            size(x.values)[2], x.row, x.col)
+    @printf(io, "%d observation values, %2.4f%% sparse. ",
+            nnz(x.values), (1.0-nnz(x.values)/*(size(x.values)...))*100.0)
+    crow = compactstring(valtype(x.row))
+    ccol = compactstring(valtype(x.col))
+    S=sum(x.values,dims=2)
+    @printf(io, "On average %.2f observed %ss/%s (unique %.2f).",
+            mean(S[S.>0]),
             ccol,
             crow,
-            mean(sum(nzs,dims=2)),
-            sum(iszero.(sum(nzs,dims=2))),
-            crow,
-            ccol,
-            sum(iszero.(sum(nzs,dims=1))),
-            ccol,
-            crow
-            )
+            mean(sum(nzs,dims=2)))
+    zeros=sum(iszero.(sum(nzs,dims=2)))
+    if zeros > 0
+        print(io," $zeros $(crow)s have no observed $ccol.")
+    end
+    zeros=sum(iszero.(sum(nzs,dims=1)))
+    if zeros > 0
+        print(io," $zeros observed $(ccol)s have no observed $crow.")
+    end
 end
 
 end # module
