@@ -117,6 +117,7 @@ julia> get!(x,'d')
 
 julia> get!(x,'d')
 4
+
 ```
 """
 Base.get!(b::NBijection, key) =
@@ -190,7 +191,7 @@ SparseArrays.sparsevec(x::LabeledMatrix,y) = sparsevec(x.col,y)
 
 
 Base.getindex(x::LabeledMatrix, a...) = x.values[a...]
-Base.getindex(x::LabeledMatrix, row::NumID, a...) =
+Base.getindex(x::LabeledMatrix, row, a...) =
     if match(x.row,row)
         x.values[get(row),a...]
     else
