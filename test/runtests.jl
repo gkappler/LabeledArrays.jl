@@ -7,7 +7,7 @@ using Test
         x = NBijection('a':'z')
         @test x[13] == 'm'
         @test eltype(x) == Char
-        @test collect(x) == vcat('a':'z',['ö'])
+        @test collect(x) == ['a':'z'...,'ö']
         @test get!(x,'m') == 13
         @test get!(x,'ö') == 27
         @test keytype(x) == Char
