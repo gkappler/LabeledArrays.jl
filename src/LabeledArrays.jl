@@ -138,6 +138,20 @@ function Base.push!(b::NBijection, key)
     b.index[key] = length(b.enumeration)
 end
 
+"""
+    sparse_vector(x::NBijection,sel)
+
+Create a sparse vector representation of `sel`ected values in `x::`[`NBijection`](@ref).
+"""
+function SparseArrays.sparsevec(x::NBijection,sel)
+    idxs = filter(
+        x->x!==nothing,
+        indexin(sel,x))
+    sparsevec(
+        idxs,
+        ConstArray(1,length(idxs)),
+        length(x))
+end
 
 
 
@@ -168,17 +182,11 @@ function collapse_observations(f::Function,x,T=Any)
                         ConstArray(1,length(cols)),
                         length(cols),length(nb)))
 end
-export row
-row(x::LabeledMatrix,y) = row(x.col,y)
-"""
-    row(x::NBijection,y)
-
-See also [`LabeledMatrix`](@ref).
-"""
-function row(x::NBijection,y)
-    idxs = filter(x->x!==nothing,indexin(y,x))
-    sparsevec(idxs,ConstArray(1,length(idxs)),length(x))
-end
+export sparsevec
+SparseArrays.sparsevec(x::LabeledMatrix,y) = sparsevec(x.col,y)
+@deprecate row(x,y) sparsevec(x,y)
+# ? col, row ?
+# SparseArrays.sparsecol(x::LabeledMatrix,y) = sparsevec(x.row,y)
 
 
 Base.getindex(x::LabeledMatrix, a...) = x.values[a...]
