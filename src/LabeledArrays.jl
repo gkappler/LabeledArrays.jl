@@ -240,11 +240,9 @@ end
         x+y.values)
 
 
-
-export bool
-"TODO: broadcasting"
-bool(A::LabeledMatrix) =
-    LabeledMatrix(A.row, A.col, A.values.>0)
+import Base: isless
+Base.isless(than::Int, A::LabeledMatrix) =
+    LabeledMatrix(A.row, A.col, A.values.>than)
 
 Base.sum(x::LabeledMatrix; kw...) =
     sum(x.values; kw...)
