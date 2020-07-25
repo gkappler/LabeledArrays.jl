@@ -158,6 +158,16 @@ end
 
 
 
+export ConstArray
+struct ConstArray{T,N,l} <: AbstractArray{T,N}
+    value::T
+    ConstArray(x::T, l::Integer...) where T =
+        new{T,length(l),l}(x)
+end
+Base.size(::ConstArray{T,N,l}) where {T,N,l}	= l
+Base.getindex(A::ConstArray, i::Int...) = A.value
+Base.setindex!(A::ConstArray, v, i::Int) = error("create a normal array and convert")
+Base.sum(A::ConstArray) = A.value * (*(size(A)...)) 
 
 export LabeledMatrix
 """
