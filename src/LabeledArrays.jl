@@ -272,32 +272,53 @@ import Printf: @printf
 function Base.show(io::IO, x::LabeledMatrix)
     Base.show(io, MIME"text/plain"(), x)
 end
-compactstring(x) =
-    let io = IOBuffer()
-        print(IOContext(io, :compact => true),x)
-        String(take!(io))
-    end
-function Base.show(io::IO, ::MIME"text/plain", x::LabeledMatrix)
+compactstring(io::IO, x) =
+    printstyled(IOContext(io, :compact => true),x,color=:red)
+
+function show_stats(x::LabeledMatrix)
     nzs = x.values.>0
-    @printf(io,"%d x %d: %s x %s. ", size(x.values)[1], 
-            size(x.values)[2], x.row, x.col)
-    @printf(io, "%d observation values, %2.4f%% sparse. ",
-            nnz(x.values), (1.0-nnz(x.values)/*(size(x.values)...))*100.0)
-    crow = compactstring(valtype(x.row))
-    ccol = compactstring(valtype(x.col))
     S=sum(x.values,dims=2)
-    @printf(io, "On average %.2f observed %ss/%s (unique %.2f).",
-            sum(S[S.>0])/length(S),
-            ccol,
-            crow,
-            sum(sum(nzs,dims=2))/size(nzs)[2])
-    zeros=sum(iszero.(sum(nzs,dims=2)))
+    (nnz=nnz(x.values)
+     , relnz = (nnz(x.values)/*(size(x.values)...))
+     , mean_row_sum = sum(S[S.>0])/length(S) #?
+     , unique = sum(sum(nzs,dims=2))/size(nzs)[2] #?
+     , zeros_1 = sum(iszero.(sum(nzs,dims=1)))
+     , zeros_2 = sum(iszero.(sum(nzs,dims=2)))
+     )
+end
+
+function Base.show(io::IO, ::MIME"text/plain", x::LabeledMatrix)
+    rel="root-word"
+    s = show_stats(x)
+    print(io, size(x.values)[1]," * ", size(x.values)[2])
+    printstyled(io," ", x.row, color=:red)
+    printstyled(io," with $rel ", color=:yellow)
+    printstyled(io," ", x.col, color=:red)
+    @printf(io, "\n%d non-zero (~%2.4f%% sparse). ",
+            s.nnz, (1.0-s.relnz)*100.0)
+    @printf(io, "\nAverage %s row-sum %.2f (unique %.2f) ",
+            rel,
+            s.mean_row_sum,
+            s.unique)
+    compactstring(io,valtype(x.col))
+    print(io,"s / ")
+    compactstring(io,valtype(x.row))
+    zeros=s.zeros_2
+    print(io,". ")
     if zeros > 0
-        print(io," $zeros $(crow)s have no observed $ccol.")
+        print(io,"\n$zeros ")
+        compactstring(io,valtype(x.row))
+        print(io, "s have all-zero ")
+        compactstring(io,valtype(x.col))
+        print(io,". ")
     end
-    zeros=sum(iszero.(sum(nzs,dims=1)))
+    zeros=s.zeros_1
     if zeros > 0
-        print(io," $zeros observed $(ccol)s have no observed $crow.")
+        print(io,"\n$zeros ")
+        compactstring(io,valtype(x.col))
+        print(io, "s occur in no ")
+        compactstring(io,valtype(x.row))
+        print(io,". ")
     end
 end
 
