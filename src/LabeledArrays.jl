@@ -64,9 +64,8 @@ Base.iterate(b::NBijection,a...) =
 @inline Base.@propagate_inbounds Base.getindex(b::NBijection,i::Integer) =
     b.enumeration[i]
 
-## import Base: match
-## Base.match(x::NBijection, y) = false
-## ?? Base.match(x::NBijection{KEY}, y::KEY) where KEY = haskey(x,y)
+import Base: match
+Base.match(x::NBijection, y) = false
 
 import Base: indexin
 Base.indexin(i,b::NBijection{KEY,I}) where {KEY,I} =
@@ -160,7 +159,7 @@ end
 
 
 
-export LabeledArray
+export LabeledMatrix
 """
 A matrix, `AbstractArray{T,2}`, with a layer labeled rows and cols.
 """
